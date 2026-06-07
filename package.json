@@ -1,0 +1,86 @@
+{
+  "name": "nestjs-error-registry",
+  "version": "0.1.0",
+  "description": "Typed error catalog for NestJS — RFC 7807 responses, automatic Swagger integration, zero boilerplate",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "build:watch": "tsc -p tsconfig.build.json --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "nestjs",
+    "error",
+    "error-handling",
+    "exception",
+    "exception-filter",
+    "rfc7807",
+    "problem-details",
+    "swagger",
+    "openapi",
+    "typescript",
+    "nestjs-module",
+    "http-errors",
+    "error-catalog",
+    "error-registry",
+    "developer-experience",
+    "dx",
+    "api-errors",
+    "typed-errors",
+    "nestjs-exception"
+  ],
+  "author": "Marvin Rocha",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MarvinRF/nestjs-error-registry.git"
+  },
+  "homepage": "https://github.com/MarvinRF/nestjs-error-registry#readme",
+  "bugs": {
+    "url": "https://github.com/MarvinRF/nestjs-error-registry/issues"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@nestjs/common": ">=9.0.0",
+    "@nestjs/core": ">=9.0.0",
+    "@nestjs/swagger": ">=6.0.0",
+    "reflect-metadata": "^0.1.13 || ^0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/swagger": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/swagger": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.0.0",
+    "jest": "^29.7.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.2",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}
