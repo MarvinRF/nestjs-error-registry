@@ -1,6 +1,6 @@
 {
   "name": "nestjs-error-registry",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Typed error catalog for NestJS — RFC 7807 responses, automatic Swagger integration, zero boilerplate",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
