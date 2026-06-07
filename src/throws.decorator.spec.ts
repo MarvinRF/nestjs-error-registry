@@ -66,6 +66,21 @@ describe('@Throws()', () => {
     expect(statuses).toContain(409);
   });
 
+  it('merges metadata when stacked (second @Throws does not overwrite first)', () => {
+    const controller = freshHandler();
+    const descriptor = Object.getOwnPropertyDescriptor(controller, 'handler')!;
+    // Decorators apply bottom-up: PAYMENT_FAILED runs first, then NOT_FOUND.
+    // Both must appear in the final metadata array.
+    Throws(OrderErrors.PAYMENT_FAILED)(controller, 'handler', descriptor);
+    Throws(OrderErrors.NOT_FOUND)(controller, 'handler', descriptor);
+
+    const metas = Reflect.getMetadata(THROWS_METADATA_KEY, descriptor.value);
+    expect(metas).toHaveLength(2);
+    const codes = metas.map((m: any) => m.code);
+    expect(codes).toContain('ORD-402');
+    expect(codes).toContain('ORD-404');
+  });
+
   it('can be applied to multiple handlers independently', () => {
     const c1 = freshHandler();
     const c2 = freshHandler();

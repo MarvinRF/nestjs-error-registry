@@ -1,4 +1,4 @@
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, HttpAdapterHost } from '@nestjs/core';
 import { DynamicModule, Module } from '@nestjs/common';
 import { ErrorRegistryFilter, ErrorRegistryOptions } from './error-registry.filter';
 
@@ -23,7 +23,12 @@ export class ErrorRegistryModule {
       providers: [
         {
           provide: APP_FILTER,
-          useValue: new ErrorRegistryFilter(options),
+          // useFactory (not useValue) so NestJS injects HttpAdapterHost, enabling
+          // BaseExceptionFilter to truly delegate non-RegistryError exceptions
+          // rather than re-implementing default NestJS handling inline.
+          useFactory: (adapterHost: HttpAdapterHost) =>
+            new ErrorRegistryFilter(options, adapterHost.httpAdapter),
+          inject: [HttpAdapterHost],
         },
       ],
     };

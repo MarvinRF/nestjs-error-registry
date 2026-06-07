@@ -19,12 +19,12 @@ const UserErrors = defineErrors({
 
 describe('defineErrors() — validation', () => {
   it('throws on status below 400', () => {
-    expect(() => defineErrors({ E: { status: 200, code: 'OK', message: 'ok' } }))
+    expect(() => defineErrors({ E: { status: 200 as any, code: 'OK', message: 'ok' } }))
       .toThrow('Invalid status');
   });
 
   it('throws on status above 599', () => {
-    expect(() => defineErrors({ E: { status: 600, code: 'ERR', message: 'err' } }))
+    expect(() => defineErrors({ E: { status: 600 as any, code: 'ERR', message: 'err' } }))
       .toThrow('Invalid status');
   });
 

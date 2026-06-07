@@ -74,7 +74,13 @@ export function defineErrors<T extends Record<string, ErrorDefinition<any>>>(
         );
         detail = meta.title ?? meta.code;
       }
-      throw new RegistryError(meta, detail, key);
+      const err = new RegistryError(meta, detail, key);
+      // Remove the internal factory frame from the V8 stack trace so the
+      // top of the stack points to the caller's code, not this library.
+      if (Error.captureStackTrace) {
+        Error.captureStackTrace(err, fn);
+      }
+      throw err;
     }) as ErrorFn<any>;
 
     Object.defineProperty(fn, '_meta', { value: meta, writable: false, enumerable: true });

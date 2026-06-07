@@ -1,4 +1,5 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
+import { ArgumentsHost, Catch, Logger } from '@nestjs/common';
+import { AbstractHttpAdapter, BaseExceptionFilter } from '@nestjs/core';
 import { Request, Response } from 'express';
 import { RegistryError } from './registry-error';
 
@@ -12,8 +13,10 @@ export interface ErrorRegistryOptions {
   baseUrl?: string;
 
   /**
-   * When true, non-RegistryError HttpExceptions are passed through to the next
-   * exception filter in the chain instead of being handled here.
+   * When true (default), non-RegistryError exceptions are delegated to
+   * NestJS's BaseExceptionFilter — preserving the behaviour of any other
+   * global filters registered in the application.
+   * When false, all unhandled exceptions are returned as a generic 500.
    * @default true
    */
   passthrough?: boolean;
@@ -23,41 +26,55 @@ export interface ErrorRegistryOptions {
  * Exception filter that catches RegistryErrors and formats them as RFC 7807
  * Problem Details (https://www.rfc-editor.org/rfc/rfc7807).
  *
- * Registered automatically by ErrorRegistryModule.forRoot(). Non-RegistryError exceptions
- * are passed through to the default NestJS exception filter unless passthrough is false.
+ * Registered automatically by ErrorRegistryModule.forRoot(). Non-RegistryError
+ * exceptions are delegated to BaseExceptionFilter (true passthrough) unless
+ * passthrough is explicitly set to false.
+ *
+ * IMPORTANT: Instantiate via ErrorRegistryModule.forRoot() so the underlying
+ * HttpAdapter is injected correctly. Direct instantiation (new ErrorRegistryFilter())
+ * is supported for unit-testing buildTypeUri but will not delegate passthrough
+ * correctly without an httpAdapter argument.
  */
 @Catch()
-export class ErrorRegistryFilter implements ExceptionFilter {
+export class ErrorRegistryFilter extends BaseExceptionFilter {
   private readonly logger = new Logger(ErrorRegistryFilter.name);
 
-  constructor(private readonly options: ErrorRegistryOptions = {}) {}
+  constructor(
+    private readonly options: ErrorRegistryOptions = {},
+    httpAdapter?: AbstractHttpAdapter,
+  ) {
+    super(httpAdapter);
+  }
 
   catch(exception: unknown, host: ArgumentsHost): void {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
-    const instance = sanitizeUrl(request.url);
-
     if (!(exception instanceof RegistryError)) {
-      // Pass through — let the default NestJS handler deal with it
-      if (this.options.passthrough !== false && exception instanceof HttpException) {
-        const status = exception.getStatus();
-        const body = exception.getResponse();
-        response.status(status).json(body);
+      if (this.options.passthrough !== false) {
+        // True delegation — BaseExceptionFilter handles HttpExceptions in NestJS
+        // format and unknown errors as 500, preserving the full filter chain.
+        super.catch(exception, host);
         return;
       }
-      // Unknown errors — 500
+
+      // passthrough: false — absorb all non-Registry exceptions as a generic 500.
       this.logger.error('Unhandled exception', exception);
+      const ctx = host.switchToHttp();
+      const response = ctx.getResponse<Response>();
+      const request = ctx.getRequest<Request>();
       response.status(500).json({
         type: this.buildTypeUri('INTERNAL_SERVER_ERROR'),
         title: 'Internal Server Error',
         status: 500,
         detail: 'An unexpected error occurred.',
-        instance,
+        instance: sanitizeUrl(request.url),
         timestamp: new Date().toISOString(),
       });
       return;
     }
+
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
+    const instance = sanitizeUrl(request.url);
 
     const { meta, detail } = exception;
     const body: Record<string, unknown> = {

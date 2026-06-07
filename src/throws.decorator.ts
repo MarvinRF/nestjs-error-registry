@@ -2,10 +2,27 @@ import { ErrorFn, ErrorMeta } from './types';
 
 export const THROWS_METADATA_KEY = 'defineErrors:throws';
 
+// Lazy singleton — resolved once on first @Throws decoration, then cached.
+// Avoids a require() call per handler while keeping @nestjs/swagger optional.
+let _ApiResponse: ((opts: object) => MethodDecorator) | null | undefined;
+
+function getApiResponse(): ((opts: object) => MethodDecorator) | null {
+  if (_ApiResponse !== undefined) return _ApiResponse;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    _ApiResponse = require('@nestjs/swagger').ApiResponse ?? null;
+  } catch {
+    _ApiResponse = null;
+  }
+  // TypeScript cannot narrow through try/catch — cast is safe: both branches assign.
+  return _ApiResponse as ((opts: object) => MethodDecorator) | null;
+}
+
 /**
  * Declares which RegistryErrors a route can throw.
  * Does two things at decoration time:
- *   1. Sets Reflect metadata so tooling and tests can inspect declared errors.
+ *   1. Merges into existing Reflect metadata so stacked @Throws decorators
+ *      accumulate rather than overwrite each other.
  *   2. Injects @ApiResponse decorators for each error into the Swagger document,
  *      including an RFC 7807-compliant response schema.
  *
@@ -16,10 +33,18 @@ export const THROWS_METADATA_KEY = 'defineErrors:throws';
  */
 export function Throws(...errors: ErrorFn<any>[]): MethodDecorator {
   return (target: object, key: string | symbol, descriptor: PropertyDescriptor) => {
-    const metas = errors.map((e) => e._meta);
+    const incoming = errors.map((e) => e._meta);
+
+    // Merge with any metadata already set by a prior @Throws on this handler.
+    // Decorators apply bottom-up, so each application must accumulate rather
+    // than overwrite to avoid silent data loss when stacking decorators.
+    const existing: ErrorMeta[] =
+      Reflect.getMetadata(THROWS_METADATA_KEY, descriptor.value) ?? [];
+    const merged = [...existing, ...incoming];
+
     // NestJS Reflector reads from descriptor.value (the handler function itself)
-    Reflect.defineMetadata(THROWS_METADATA_KEY, metas, descriptor.value);
-    applySwaggerResponses(metas, target, key, descriptor);
+    Reflect.defineMetadata(THROWS_METADATA_KEY, merged, descriptor.value);
+    applySwaggerResponses(incoming, target, key, descriptor);
   };
 }
 
@@ -29,16 +54,7 @@ function applySwaggerResponses(
   key: string | symbol,
   descriptor: PropertyDescriptor,
 ): void {
-  let ApiResponse: ((opts: object) => MethodDecorator) | undefined;
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    ApiResponse = require('@nestjs/swagger').ApiResponse;
-  } catch {
-    // @nestjs/swagger is optional — skip silently
-    return;
-  }
-
+  const ApiResponse = getApiResponse();
   if (!ApiResponse) return;
 
   // Group by status so multiple errors with the same status get merged
@@ -102,7 +118,8 @@ function buildRfc7807Schema(metas: ErrorMeta[]): object {
       timestamp: {
         type: 'string',
         format: 'date-time',
-        example: new Date().toISOString(),
+        // Static example — avoids freezing the server boot time in Swagger UI.
+        example: '2024-01-15T10:30:00.000Z',
       },
       code: {
         type: 'string',
