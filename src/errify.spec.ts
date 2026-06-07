@@ -17,6 +17,59 @@ const UserErrors = errify({
   },
 });
 
+describe('errify() — validation', () => {
+  it('throws on status below 400', () => {
+    expect(() => errify({ E: { status: 200, code: 'OK', message: 'ok' } }))
+      .toThrow('Invalid status');
+  });
+
+  it('throws on status above 599', () => {
+    expect(() => errify({ E: { status: 600, code: 'ERR', message: 'err' } }))
+      .toThrow('Invalid status');
+  });
+
+  it('throws on non-integer status', () => {
+    expect(() => errify({ E: { status: 404.5 as any, code: 'ERR', message: 'err' } }))
+      .toThrow('Invalid status');
+  });
+
+  it('throws on code with lowercase letters', () => {
+    expect(() => errify({ E: { status: 404, code: 'usr-404', message: 'err' } }))
+      .toThrow('Invalid code');
+  });
+
+  it('throws on code with special characters', () => {
+    expect(() => errify({ E: { status: 404, code: '../admin', message: 'err' } }))
+      .toThrow('Invalid code');
+  });
+
+  it('throws on code with whitespace', () => {
+    expect(() => errify({ E: { status: 404, code: 'USR 404', message: 'err' } }))
+      .toThrow('Invalid code');
+  });
+
+  it('accepts valid code with hyphens and underscores', () => {
+    expect(() => errify({ E: { status: 404, code: 'USR-404_NOT_FOUND', message: 'err' } }))
+      .not.toThrow();
+  });
+});
+
+describe('errify() — factory error safety', () => {
+  it('falls back to title when message factory throws', () => {
+    const errors = errify({
+      BAD: {
+        status: 500,
+        code: 'BAD-500',
+        title: 'Fallback Title',
+        message: () => { throw new Error('factory crash'); },
+      },
+    });
+    try { errors.BAD(); } catch (e) {
+      expect((e as ErrifyError).detail).toBe('Fallback Title');
+    }
+  });
+});
+
 describe('errify()', () => {
   it('throws ErrifyError with correct status', () => {
     expect(() => UserErrors.NOT_FOUND('abc')).toThrow(ErrifyError);

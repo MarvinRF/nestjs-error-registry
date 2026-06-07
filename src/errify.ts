@@ -1,6 +1,23 @@
 import { ErrifyError } from './errify-error';
 import { ErrorDefinition, ErrorMeta, ErrifyFn, ErrifyMap } from './types';
 
+const SAFE_CODE_PATTERN = /^[A-Z0-9_-]+$/;
+
+function validateDefinition(key: string, def: ErrorDefinition<any>): void {
+  if (!Number.isInteger(def.status) || def.status < 400 || def.status > 599) {
+    throw new Error(
+      `[nestjs-error-registry] Invalid status for "${key}": ${def.status}. ` +
+      `Must be an integer between 400 and 599.`,
+    );
+  }
+  if (typeof def.code !== 'string' || !SAFE_CODE_PATTERN.test(def.code)) {
+    throw new Error(
+      `[nestjs-error-registry] Invalid code for "${key}": "${def.code}". ` +
+      `Must match [A-Z0-9_-]+ (uppercase letters, digits, underscores, hyphens only).`,
+    );
+  }
+}
+
 /**
  * Creates a typed error catalog. Each key becomes a callable that throws an
  * ErrifyError with RFC 7807-compatible metadata.
@@ -35,6 +52,8 @@ export function errify<T extends Record<string, ErrorDefinition<any>>>(
   const result = {} as ErrifyMap<T>;
 
   for (const [key, def] of Object.entries(definitions) as [string, ErrorDefinition<any>][]) {
+    validateDefinition(key, def);
+
     const meta: ErrorMeta = {
       status: def.status,
       code: def.code,
@@ -43,10 +62,18 @@ export function errify<T extends Record<string, ErrorDefinition<any>>>(
     };
 
     const fn = ((...args: unknown[]): never => {
-      const detail =
-        typeof def.message === 'function'
-          ? def.message(...args)
-          : def.message;
+      let detail: string;
+      try {
+        detail = typeof def.message === 'function' ? def.message(...args) : def.message;
+      } catch (factoryErr) {
+        // The message factory itself threw — fall back to a safe static message
+        // so the intended ErrifyError is still raised instead of a 500.
+        console.error(
+          `[nestjs-error-registry] Message factory for "${key}" threw an error:`,
+          factoryErr,
+        );
+        detail = meta.title ?? meta.code;
+      }
       throw new ErrifyError(meta, detail, key);
     }) as ErrifyFn<any>;
 

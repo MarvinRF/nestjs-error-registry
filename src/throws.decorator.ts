@@ -1,4 +1,3 @@
-import { SetMetadata } from '@nestjs/common';
 import { ErrifyFn, ErrorMeta } from './types';
 
 export const THROWS_METADATA_KEY = 'errify:throws';
@@ -52,13 +51,21 @@ function applySwaggerResponses(
 
   for (const [status, group] of byStatus) {
     const description = group
-      .map((m) => `**${m.code}** — ${m.title ?? m.code}`)
+      .map((m) => `**${escapeHtml(m.code)}** — ${escapeHtml(m.title ?? m.code)}`)
       .join('<br>');
 
     const schema = buildRfc7807Schema(group);
 
     ApiResponse({ status, description, schema })(target, key, descriptor);
   }
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function buildRfc7807Schema(metas: ErrorMeta[]): object {

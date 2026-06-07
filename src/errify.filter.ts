@@ -36,6 +36,7 @@ export class ErrifyExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+    const instance = sanitizeUrl(request.url);
 
     if (!(exception instanceof ErrifyError)) {
       // Pass through — let the default NestJS handler deal with it
@@ -52,7 +53,7 @@ export class ErrifyExceptionFilter implements ExceptionFilter {
         title: 'Internal Server Error',
         status: 500,
         detail: 'An unexpected error occurred.',
-        instance: request.url,
+        instance,
         timestamp: new Date().toISOString(),
       });
       return;
@@ -64,7 +65,7 @@ export class ErrifyExceptionFilter implements ExceptionFilter {
       title: meta.title ?? meta.code,
       status: meta.status,
       detail,
-      instance: request.url,
+      instance,
       timestamp: new Date().toISOString(),
       code: meta.code,
     };
@@ -79,4 +80,15 @@ export class ErrifyExceptionFilter implements ExceptionFilter {
     const base = (this.options.baseUrl ?? '').replace(/\/+$/, '');
     return `${base}/errors/${code}`;
   }
+}
+
+const MAX_INSTANCE_LENGTH = 512;
+
+function sanitizeUrl(url: string): string {
+  // Strip ASCII control characters (0x00–0x1F and 0x7F) to prevent log injection
+  // and truncate to a safe length to prevent oversized responses.
+  const stripped = url.replace(/[\x00-\x1F\x7F]/g, '');
+  return stripped.length > MAX_INSTANCE_LENGTH
+    ? stripped.slice(0, MAX_INSTANCE_LENGTH) + '…'
+    : stripped;
 }

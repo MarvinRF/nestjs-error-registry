@@ -79,6 +79,12 @@ describe('ErrifyExceptionFilter (integration)', () => {
     expect(res.body.code).toBe('USR-409');
     expect(res.body.detail).toBe('Email already in use');
   });
+
+  it('instance field contains no control characters', async () => {
+    const res = await request(app.getHttpServer()).get('/users/abc');
+    expect(/[\x00-\x1F\x7F]/.test(res.body.instance ?? '')).toBe(false);
+    expect(res.body.instance).toBe('/users/abc');
+  });
 });
 
 describe('ErrifyExceptionFilter (unit)', () => {
