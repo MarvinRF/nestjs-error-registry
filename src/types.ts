@@ -14,16 +14,16 @@ export interface ErrorMeta {
   messageTemplate: string | MessageFactory<any[]>;
 }
 
-/** A callable that throws an ErrifyError. Return type is `never` so TypeScript
+/** A callable that throws an RegistryError. Return type is `never` so TypeScript
  *  understands control flow terminates here — no explicit `throw` needed,
  *  though `throw UserErrors.NOT_FOUND('id')` is also idiomatic and clear. */
-export type ErrifyFn<A extends unknown[]> = ((...args: A) => never) & {
+export type ErrorFn<A extends unknown[]> = ((...args: A) => never) & {
   readonly _meta: ErrorMeta;
 };
 
 type InferArgs<T extends ErrorDefinition<any>> =
   T extends ErrorDefinition<infer A> ? A : [];
 
-export type ErrifyMap<T extends Record<string, ErrorDefinition<any>>> = {
-  readonly [K in keyof T]: ErrifyFn<InferArgs<T[K]>>;
+export type ErrorMap<T extends Record<string, ErrorDefinition<any>>> = {
+  readonly [K in keyof T]: ErrorFn<InferArgs<T[K]>>;
 };

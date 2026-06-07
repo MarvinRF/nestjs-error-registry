@@ -1,7 +1,7 @@
 import { HttpException } from '@nestjs/common';
 import { ErrorMeta } from './types';
 
-export class ErrifyError extends HttpException {
+export class RegistryError extends HttpException {
   constructor(
     public readonly meta: ErrorMeta,
     public readonly detail: string,

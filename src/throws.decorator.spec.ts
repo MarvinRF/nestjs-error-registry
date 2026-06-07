@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import { Throws, THROWS_METADATA_KEY } from './throws.decorator';
-import { errify } from './errify';
+import { defineErrors } from './define-errors';
 
-const OrderErrors = errify({
+const OrderErrors = defineErrors({
   NOT_FOUND: {
     status: 404,
     code: 'ORD-404',

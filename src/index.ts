@@ -1,6 +1,6 @@
-export { errify } from './errify';
-export { ErrifyError } from './errify-error';
-export { ErrifyModule, ErrifyModuleOptions } from './errify.module';
-export { ErrifyExceptionFilter, ErrifyFilterOptions } from './errify.filter';
+export { defineErrors } from './define-errors';
+export { RegistryError } from './registry-error';
+export { ErrorRegistryModule, ErrorRegistryModuleOptions } from './error-registry.module';
+export { ErrorRegistryFilter, ErrorRegistryOptions } from './error-registry.filter';
 export { Throws, THROWS_METADATA_KEY } from './throws.decorator';
-export { ErrorDefinition, ErrorMeta, ErrifyFn, ErrifyMap } from './types';
+export { ErrorDefinition, ErrorMeta, ErrorFn, ErrorMap } from './types';

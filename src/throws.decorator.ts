@@ -1,9 +1,9 @@
-import { ErrifyFn, ErrorMeta } from './types';
+import { ErrorFn, ErrorMeta } from './types';
 
-export const THROWS_METADATA_KEY = 'errify:throws';
+export const THROWS_METADATA_KEY = 'defineErrors:throws';
 
 /**
- * Declares which ErrifyErrors a route can throw.
+ * Declares which RegistryErrors a route can throw.
  * Does two things at decoration time:
  *   1. Sets Reflect metadata so tooling and tests can inspect declared errors.
  *   2. Injects @ApiResponse decorators for each error into the Swagger document,
@@ -14,7 +14,7 @@ export const THROWS_METADATA_KEY = 'errify:throws';
  * @Throws(UserErrors.NOT_FOUND, UserErrors.EMAIL_TAKEN)
  * async getUser(@Param('id') id: string) { ... }
  */
-export function Throws(...errors: ErrifyFn<any>[]): MethodDecorator {
+export function Throws(...errors: ErrorFn<any>[]): MethodDecorator {
   return (target: object, key: string | symbol, descriptor: PropertyDescriptor) => {
     const metas = errors.map((e) => e._meta);
     // NestJS Reflector reads from descriptor.value (the handler function itself)

@@ -1,5 +1,5 @@
-import { ErrifyError } from './errify-error';
-import { ErrorDefinition, ErrorMeta, ErrifyFn, ErrifyMap } from './types';
+import { RegistryError } from './registry-error';
+import { ErrorDefinition, ErrorMeta, ErrorFn, ErrorMap } from './types';
 
 const SAFE_CODE_PATTERN = /^[A-Z0-9_-]+$/;
 
@@ -20,10 +20,10 @@ function validateDefinition(key: string, def: ErrorDefinition<any>): void {
 
 /**
  * Creates a typed error catalog. Each key becomes a callable that throws an
- * ErrifyError with RFC 7807-compatible metadata.
+ * RegistryError with RFC 7807-compatible metadata.
  *
  * @example
- * export const UserErrors = errify({
+ * export const UserErrors = defineErrors({
  *   NOT_FOUND: {
  *     status: 404,
  *     code: 'USR-404',
@@ -46,10 +46,10 @@ function validateDefinition(key: string, def: ErrorDefinition<any>): void {
  * @Throws(UserErrors.NOT_FOUND, UserErrors.EMAIL_TAKEN)
  * async getUser(@Param('id') id: string) { ... }
  */
-export function errify<T extends Record<string, ErrorDefinition<any>>>(
+export function defineErrors<T extends Record<string, ErrorDefinition<any>>>(
   definitions: T,
-): ErrifyMap<T> {
-  const result = {} as ErrifyMap<T>;
+): ErrorMap<T> {
+  const result = {} as ErrorMap<T>;
 
   for (const [key, def] of Object.entries(definitions) as [string, ErrorDefinition<any>][]) {
     validateDefinition(key, def);
@@ -67,19 +67,19 @@ export function errify<T extends Record<string, ErrorDefinition<any>>>(
         detail = typeof def.message === 'function' ? def.message(...args) : def.message;
       } catch (factoryErr) {
         // The message factory itself threw — fall back to a safe static message
-        // so the intended ErrifyError is still raised instead of a 500.
+        // so the intended RegistryError is still raised instead of a 500.
         console.error(
           `[nestjs-error-registry] Message factory for "${key}" threw an error:`,
           factoryErr,
         );
         detail = meta.title ?? meta.code;
       }
-      throw new ErrifyError(meta, detail, key);
-    }) as ErrifyFn<any>;
+      throw new RegistryError(meta, detail, key);
+    }) as ErrorFn<any>;
 
     Object.defineProperty(fn, '_meta', { value: meta, writable: false, enumerable: true });
 
-    (result as Record<string, ErrifyFn<any>>)[key] = fn;
+    (result as Record<string, ErrorFn<any>>)[key] = fn;
   }
 
   return result;

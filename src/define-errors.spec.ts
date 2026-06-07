@@ -1,8 +1,8 @@
 import 'reflect-metadata';
-import { errify } from './errify';
-import { ErrifyError } from './errify-error';
+import { defineErrors } from './define-errors';
+import { RegistryError } from './registry-error';
 
-const UserErrors = errify({
+const UserErrors = defineErrors({
   NOT_FOUND: {
     status: 404,
     code: 'USR-404',
@@ -17,46 +17,46 @@ const UserErrors = errify({
   },
 });
 
-describe('errify() — validation', () => {
+describe('defineErrors() — validation', () => {
   it('throws on status below 400', () => {
-    expect(() => errify({ E: { status: 200, code: 'OK', message: 'ok' } }))
+    expect(() => defineErrors({ E: { status: 200, code: 'OK', message: 'ok' } }))
       .toThrow('Invalid status');
   });
 
   it('throws on status above 599', () => {
-    expect(() => errify({ E: { status: 600, code: 'ERR', message: 'err' } }))
+    expect(() => defineErrors({ E: { status: 600, code: 'ERR', message: 'err' } }))
       .toThrow('Invalid status');
   });
 
   it('throws on non-integer status', () => {
-    expect(() => errify({ E: { status: 404.5 as any, code: 'ERR', message: 'err' } }))
+    expect(() => defineErrors({ E: { status: 404.5 as any, code: 'ERR', message: 'err' } }))
       .toThrow('Invalid status');
   });
 
   it('throws on code with lowercase letters', () => {
-    expect(() => errify({ E: { status: 404, code: 'usr-404', message: 'err' } }))
+    expect(() => defineErrors({ E: { status: 404, code: 'usr-404', message: 'err' } }))
       .toThrow('Invalid code');
   });
 
   it('throws on code with special characters', () => {
-    expect(() => errify({ E: { status: 404, code: '../admin', message: 'err' } }))
+    expect(() => defineErrors({ E: { status: 404, code: '../admin', message: 'err' } }))
       .toThrow('Invalid code');
   });
 
   it('throws on code with whitespace', () => {
-    expect(() => errify({ E: { status: 404, code: 'USR 404', message: 'err' } }))
+    expect(() => defineErrors({ E: { status: 404, code: 'USR 404', message: 'err' } }))
       .toThrow('Invalid code');
   });
 
   it('accepts valid code with hyphens and underscores', () => {
-    expect(() => errify({ E: { status: 404, code: 'USR-404_NOT_FOUND', message: 'err' } }))
+    expect(() => defineErrors({ E: { status: 404, code: 'USR-404_NOT_FOUND', message: 'err' } }))
       .not.toThrow();
   });
 });
 
-describe('errify() — factory error safety', () => {
+describe('defineErrors() — factory error safety', () => {
   it('falls back to title when message factory throws', () => {
-    const errors = errify({
+    const errors = defineErrors({
       BAD: {
         status: 500,
         code: 'BAD-500',
@@ -65,28 +65,28 @@ describe('errify() — factory error safety', () => {
       },
     });
     try { errors.BAD(); } catch (e) {
-      expect((e as ErrifyError).detail).toBe('Fallback Title');
+      expect((e as RegistryError).detail).toBe('Fallback Title');
     }
   });
 });
 
-describe('errify()', () => {
-  it('throws ErrifyError with correct status', () => {
-    expect(() => UserErrors.NOT_FOUND('abc')).toThrow(ErrifyError);
+describe('defineErrors()', () => {
+  it('throws RegistryError with correct status', () => {
+    expect(() => UserErrors.NOT_FOUND('abc')).toThrow(RegistryError);
     try { UserErrors.NOT_FOUND('abc'); } catch (e) {
-      expect((e as ErrifyError).meta.status).toBe(404);
+      expect((e as RegistryError).meta.status).toBe(404);
     }
   });
 
   it('interpolates message with provided args', () => {
     try { UserErrors.NOT_FOUND('abc-123'); } catch (e) {
-      expect((e as ErrifyError).detail).toBe('User with id abc-123 not found');
+      expect((e as RegistryError).detail).toBe('User with id abc-123 not found');
     }
   });
 
   it('uses static message when no factory', () => {
     try { UserErrors.EMAIL_TAKEN(); } catch (e) {
-      expect((e as ErrifyError).detail).toBe('Email already in use');
+      expect((e as RegistryError).detail).toBe('Email already in use');
     }
   });
 
@@ -111,13 +111,13 @@ describe('errify()', () => {
 
   it('sets errorKey to the catalog key', () => {
     try { UserErrors.NOT_FOUND('x'); } catch (e) {
-      expect((e as ErrifyError).errorKey).toBe('NOT_FOUND');
+      expect((e as RegistryError).errorKey).toBe('NOT_FOUND');
     }
   });
 
   it('works with zero-arg factory (static message)', () => {
     try { UserErrors.EMAIL_TAKEN(); } catch (e) {
-      expect((e as ErrifyError).meta.code).toBe('USR-409');
+      expect((e as RegistryError).meta.code).toBe('USR-409');
     }
   });
 });

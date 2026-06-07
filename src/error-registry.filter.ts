@@ -1,8 +1,8 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ErrifyError } from './errify-error';
+import { RegistryError } from './registry-error';
 
-export interface ErrifyFilterOptions {
+export interface ErrorRegistryOptions {
   /**
    * Base URL used to construct the RFC 7807 `type` URI.
    * Example: 'https://api.example.com'
@@ -12,7 +12,7 @@ export interface ErrifyFilterOptions {
   baseUrl?: string;
 
   /**
-   * When true, non-ErrifyError HttpExceptions are passed through to the next
+   * When true, non-RegistryError HttpExceptions are passed through to the next
    * exception filter in the chain instead of being handled here.
    * @default true
    */
@@ -20,17 +20,17 @@ export interface ErrifyFilterOptions {
 }
 
 /**
- * Exception filter that catches ErrifyErrors and formats them as RFC 7807
+ * Exception filter that catches RegistryErrors and formats them as RFC 7807
  * Problem Details (https://www.rfc-editor.org/rfc/rfc7807).
  *
- * Registered automatically by ErrifyModule.forRoot(). Non-ErrifyError exceptions
+ * Registered automatically by ErrorRegistryModule.forRoot(). Non-RegistryError exceptions
  * are passed through to the default NestJS exception filter unless passthrough is false.
  */
 @Catch()
-export class ErrifyExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(ErrifyExceptionFilter.name);
+export class ErrorRegistryFilter implements ExceptionFilter {
+  private readonly logger = new Logger(ErrorRegistryFilter.name);
 
-  constructor(private readonly options: ErrifyFilterOptions = {}) {}
+  constructor(private readonly options: ErrorRegistryOptions = {}) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
@@ -38,7 +38,7 @@ export class ErrifyExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
     const instance = sanitizeUrl(request.url);
 
-    if (!(exception instanceof ErrifyError)) {
+    if (!(exception instanceof RegistryError)) {
       // Pass through — let the default NestJS handler deal with it
       if (this.options.passthrough !== false && exception instanceof HttpException) {
         const status = exception.getStatus();

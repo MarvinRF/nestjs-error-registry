@@ -16,7 +16,7 @@ No single source of truth. No TypeScript enforcement at the call site. Swagger d
 
 ```ts
 // errors/user.errors.ts — one place, full contract
-export const UserErrors = errify({
+export const UserErrors = defineErrors({
   NOT_FOUND: {
     status: 404,
     code: 'USR-404',
@@ -78,11 +78,11 @@ npm install @nestjs/swagger
 
 ```ts
 // app.module.ts
-import { ErrifyModule } from 'nestjs-error-registry';
+import { ErrorRegistryModule } from 'nestjs-error-registry';
 
 @Module({
   imports: [
-    ErrifyModule.forRoot({
+    ErrorRegistryModule.forRoot({
       baseUrl: 'https://api.example.com',
     }),
   ],
@@ -93,9 +93,9 @@ export class AppModule {}
 ## Defining errors
 
 ```ts
-import { errify } from 'nestjs-error-registry';
+import { defineErrors } from 'nestjs-error-registry';
 
-export const OrderErrors = errify({
+export const OrderErrors = defineErrors({
   NOT_FOUND: {
     status: 404,
     code: 'ORD-404',
@@ -168,7 +168,7 @@ Errors with the same HTTP status are merged into a single `@ApiResponse` with a 
 
 ## RFC 7807 response format
 
-Every `ErrifyError` is formatted as [RFC 7807 Problem Details](https://www.rfc-editor.org/rfc/rfc7807) with `Content-Type: application/problem+json`:
+Every `RegistryError` is formatted as [RFC 7807 Problem Details](https://www.rfc-editor.org/rfc/rfc7807) with `Content-Type: application/problem+json`:
 
 ```json
 {
@@ -185,11 +185,11 @@ Every `ErrifyError` is formatted as [RFC 7807 Problem Details](https://www.rfc-e
 ## Module options
 
 ```ts
-ErrifyModule.forRoot({
+ErrorRegistryModule.forRoot({
   // Prefix for the RFC 7807 'type' URI. Default: '' (relative: '/errors/ORD-404')
   baseUrl: 'https://api.example.com',
 
-  // When true (default), non-ErrifyError HttpExceptions are passed to the
+  // When true (default), non-RegistryError HttpExceptions are passed to the
   // default NestJS handler. Set to false to handle everything here.
   passthrough: true,
 })
@@ -206,14 +206,14 @@ const metas = Reflect.getMetadata(THROWS_METADATA_KEY, handler);
 // [{ status: 404, code: 'ORD-404', title: 'Order Not Found', ... }]
 ```
 
-## Using without `ErrifyModule`
+## Using without `ErrorRegistryModule`
 
-If you already have a global exception filter, use `ErrifyExceptionFilter` directly:
+If you already have a global exception filter, use `ErrorRegistryFilter` directly:
 
 ```ts
-import { ErrifyExceptionFilter } from 'nestjs-error-registry';
+import { ErrorRegistryFilter } from 'nestjs-error-registry';
 
-app.useGlobalFilters(new ErrifyExceptionFilter({ baseUrl: 'https://api.example.com' }));
+app.useGlobalFilters(new ErrorRegistryFilter({ baseUrl: 'https://api.example.com' }));
 ```
 
 ## License

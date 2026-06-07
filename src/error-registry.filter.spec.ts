@@ -3,12 +3,12 @@ import { Controller, Get, INestApplication, Module, Param } from '@nestjs/common
 import { Test } from '@nestjs/testing';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const request = require('supertest');
-import { errify } from './errify';
-import { ErrifyModule } from './errify.module';
-import { ErrifyExceptionFilter } from './errify.filter';
+import { defineErrors } from './define-errors';
+import { ErrorRegistryModule } from './error-registry.module';
+import { ErrorRegistryFilter } from './error-registry.filter';
 import { Throws } from './throws.decorator';
 
-const UserErrors = errify({
+const UserErrors = defineErrors({
   NOT_FOUND: {
     status: 404,
     code: 'USR-404',
@@ -38,12 +38,12 @@ class UsersController {
 }
 
 @Module({
-  imports: [ErrifyModule.forRoot({ baseUrl: 'https://api.example.com' })],
+  imports: [ErrorRegistryModule.forRoot({ baseUrl: 'https://api.example.com' })],
   controllers: [UsersController],
 })
 class TestAppModule {}
 
-describe('ErrifyExceptionFilter (integration)', () => {
+describe('ErrorRegistryFilter (integration)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -56,7 +56,7 @@ describe('ErrifyExceptionFilter (integration)', () => {
 
   afterAll(() => app.close());
 
-  it('returns RFC 7807 body for ErrifyError', async () => {
+  it('returns RFC 7807 body for RegistryError', async () => {
     const res = await request(app.getHttpServer()).get('/users/abc-123');
     expect(res.status).toBe(404);
     expect(res.body.type).toBe('https://api.example.com/errors/USR-404');
@@ -87,21 +87,21 @@ describe('ErrifyExceptionFilter (integration)', () => {
   });
 });
 
-describe('ErrifyExceptionFilter (unit)', () => {
+describe('ErrorRegistryFilter (unit)', () => {
   it('builds relative type URI when no baseUrl', () => {
-    const filter = new ErrifyExceptionFilter({});
+    const filter = new ErrorRegistryFilter({});
     const uri = (filter as any).buildTypeUri('USR-404');
     expect(uri).toBe('/errors/USR-404');
   });
 
   it('builds absolute type URI with baseUrl', () => {
-    const filter = new ErrifyExceptionFilter({ baseUrl: 'https://api.example.com' });
+    const filter = new ErrorRegistryFilter({ baseUrl: 'https://api.example.com' });
     const uri = (filter as any).buildTypeUri('USR-404');
     expect(uri).toBe('https://api.example.com/errors/USR-404');
   });
 
   it('strips trailing slash from baseUrl', () => {
-    const filter = new ErrifyExceptionFilter({ baseUrl: 'https://api.example.com/' });
+    const filter = new ErrorRegistryFilter({ baseUrl: 'https://api.example.com/' });
     const uri = (filter as any).buildTypeUri('USR-404');
     expect(uri).toBe('https://api.example.com/errors/USR-404');
   });
