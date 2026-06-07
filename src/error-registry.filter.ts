@@ -6,8 +6,8 @@ import { RegistryError } from './registry-error';
 export interface ErrorRegistryOptions {
   /**
    * Base URL used to construct the RFC 7807 `type` URI.
-   * Example: 'https://api.example.com'
-   * Result: 'https://api.example.com/errors/USR-404'
+   * Example: 'https://example.com'
+   * Result: 'https://example.com/errors/USR-404'
    * @default ''  (relative URI: '/errors/USR-404')
    */
   baseUrl?: string;

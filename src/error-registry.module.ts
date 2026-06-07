@@ -10,7 +10,7 @@ export interface ErrorRegistryModuleOptions extends ErrorRegistryOptions {}
  * @example
  * @Module({
  *   imports: [
- *     ErrorRegistryModule.forRoot({ baseUrl: 'https://api.example.com' }),
+ *     ErrorRegistryModule.forRoot({ baseUrl: 'https://example.com' }),
  *   ],
  * })
  * export class AppModule {}

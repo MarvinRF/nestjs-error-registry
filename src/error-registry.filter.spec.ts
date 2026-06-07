@@ -38,7 +38,7 @@ class UsersController {
 }
 
 @Module({
-  imports: [ErrorRegistryModule.forRoot({ baseUrl: 'https://api.example.com' })],
+  imports: [ErrorRegistryModule.forRoot({ baseUrl: 'https://example.com' })],
   controllers: [UsersController],
 })
 class TestAppModule {}
@@ -59,7 +59,7 @@ describe('ErrorRegistryFilter (integration)', () => {
   it('returns RFC 7807 body for RegistryError', async () => {
     const res = await request(app.getHttpServer()).get('/users/abc-123');
     expect(res.status).toBe(404);
-    expect(res.body.type).toBe('https://api.example.com/errors/USR-404');
+    expect(res.body.type).toBe('https://example.com/errors/USR-404');
     expect(res.body.title).toBe('User Not Found');
     expect(res.body.status).toBe(404);
     expect(res.body.detail).toBe('User with id abc-123 not found');
@@ -95,14 +95,14 @@ describe('ErrorRegistryFilter (unit)', () => {
   });
 
   it('builds absolute type URI with baseUrl', () => {
-    const filter = new ErrorRegistryFilter({ baseUrl: 'https://api.example.com' });
+    const filter = new ErrorRegistryFilter({ baseUrl: 'https://example.com' });
     const uri = (filter as any).buildTypeUri('USR-404');
-    expect(uri).toBe('https://api.example.com/errors/USR-404');
+    expect(uri).toBe('https://example.com/errors/USR-404');
   });
 
   it('strips trailing slash from baseUrl', () => {
-    const filter = new ErrorRegistryFilter({ baseUrl: 'https://api.example.com/' });
+    const filter = new ErrorRegistryFilter({ baseUrl: 'https://example.com/' });
     const uri = (filter as any).buildTypeUri('USR-404');
-    expect(uri).toBe('https://api.example.com/errors/USR-404');
+    expect(uri).toBe('https://example.com/errors/USR-404');
   });
 });

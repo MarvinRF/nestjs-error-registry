@@ -95,7 +95,7 @@ function buildRfc7807Schema(metas: ErrorMeta[]): object {
       type: {
         type: 'string',
         description: 'URI reference identifying the error type',
-        example: `https://api.example.com/errors/${codeEnum[0]}`,
+        example: `https://example.com/errors/${codeEnum[0]}`,
       },
       title: {
         type: 'string',

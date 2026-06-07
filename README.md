@@ -50,7 +50,7 @@ async getUser(@Param('id') id: string) {
 ```json
 // HTTP response — RFC 7807 Problem Details
 {
-  "type": "https://api.example.com/errors/USR-404",
+  "type": "https://example.com/errors/USR-404",
   "title": "User Not Found",
   "status": 404,
   "detail": "User with id abc-123 not found",
@@ -83,7 +83,7 @@ import { ErrorRegistryModule } from 'nestjs-error-registry';
 @Module({
   imports: [
     ErrorRegistryModule.forRoot({
-      baseUrl: 'https://api.example.com',
+      baseUrl: 'https://example.com',
     }),
   ],
 })
@@ -172,7 +172,7 @@ Every `RegistryError` is formatted as [RFC 7807 Problem Details](https://www.rfc
 
 ```json
 {
-  "type": "https://api.example.com/errors/ORD-404",
+  "type": "https://example.com/errors/ORD-404",
   "title": "Order Not Found",
   "status": 404,
   "detail": "Order ord-abc-123 not found",
@@ -187,7 +187,7 @@ Every `RegistryError` is formatted as [RFC 7807 Problem Details](https://www.rfc
 ```ts
 ErrorRegistryModule.forRoot({
   // Prefix for the RFC 7807 'type' URI. Default: '' (relative: '/errors/ORD-404')
-  baseUrl: 'https://api.example.com',
+  baseUrl: 'https://example.com',
 
   // When true (default), non-RegistryError HttpExceptions are passed to the
   // default NestJS handler. Set to false to handle everything here.
@@ -213,7 +213,7 @@ If you already have a global exception filter, use `ErrorRegistryFilter` directl
 ```ts
 import { ErrorRegistryFilter } from 'nestjs-error-registry';
 
-app.useGlobalFilters(new ErrorRegistryFilter({ baseUrl: 'https://api.example.com' }));
+app.useGlobalFilters(new ErrorRegistryFilter({ baseUrl: 'https://example.com' }));
 ```
 
 ## License
