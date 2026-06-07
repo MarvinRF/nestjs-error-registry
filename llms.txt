@@ -1,0 +1,125 @@
+# nestjs-error-registry
+
+> Typed error catalog for NestJS. Define all your HTTP errors once with `errify()`, throw them with full TypeScript inference, get RFC 7807 Problem Details responses automatically, and have Swagger `@ApiResponse` schemas injected via `@Throws()` — without touching a single `@ApiResponse` decorator in your controllers.
+
+## What it solves
+
+NestJS applications scatter `throw new NotFoundException('...')` across services, throw generic strings as error messages, and require developers to manually maintain `@ApiResponse` decorators in controllers. There is no single source of truth for errors. `nestjs-error-registry` centralizes error definitions, enforces types at the call site, and wires Swagger + RFC 7807 automatically.
+
+## Core API
+
+### `errify(definitions)` — creates a typed error catalog
+
+Each key maps to an `ErrorDefinition` with static metadata (`status`, `code`, `title`) and an optional dynamic message factory.
+
+```ts
+export const UserErrors = errify({
+  NOT_FOUND: {
+    status: 404,
+    code: 'USR-404',
+    title: 'User Not Found',
+    message: (id: string) => `User with id ${id} not found`,
+  },
+  EMAIL_TAKEN: {
+    status: 409,
+    code: 'USR-409',
+    title: 'Email Already Taken',
+    message: 'Email already in use',
+  },
+});
+
+// TypeScript infers (id: string) from the message factory:
+throw UserErrors.NOT_FOUND(userId);
+
+// TypeScript infers () for static messages:
+throw UserErrors.EMAIL_TAKEN();
+```
+
+Returns an `ErrifyMap<T>` where each key is an `ErrifyFn` — a callable that throws `ErrifyError` and exposes `._meta` for `@Throws()` and Swagger.
+
+### `ErrifyError`
+
+Extends `HttpException`. Carries:
+- `meta: ErrorMeta` — `{ status, code, title, messageTemplate }`
+- `detail: string` — the resolved message (after calling the factory with args)
+- `errorKey: string` — the catalog key (e.g. `'NOT_FOUND'`)
+
+### `@Throws(...errorFns)` — method decorator
+
+Applied to controller route handlers. Does two things:
+1. Writes `ErrorMeta[]` to `Reflect` metadata under key `'errify:throws'` on the handler function — readable via `Reflector` in guards, interceptors, or tooling.
+2. Injects `@ApiResponse` decorators for each declared error into the Swagger document, with an RFC 7807-compliant schema. Errors with the same HTTP status are grouped into a single `@ApiResponse` with a merged description and a `code` enum.
+
+```ts
+@Get(':id')
+@Throws(UserErrors.NOT_FOUND, UserErrors.EMAIL_TAKEN)
+async getUser(@Param('id') id: string) { ... }
+```
+
+`@nestjs/swagger` is an optional peer dependency — if not installed, `@Throws` skips Swagger injection silently.
+
+### `ErrifyModule.forRoot(options?)` — root module
+
+Registers `ErrifyExceptionFilter` as a global `APP_FILTER`.
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `baseUrl` | `string` | `''` | Prefix for the RFC 7807 `type` URI |
+| `passthrough` | `boolean` | `true` | Forward non-ErrifyError HttpExceptions to default NestJS handling |
+
+### `ErrifyExceptionFilter`
+
+`@Catch()` filter that intercepts `ErrifyError` and returns RFC 7807 Problem Details:
+
+```json
+{
+  "type": "https://api.example.com/errors/USR-404",
+  "title": "User Not Found",
+  "status": 404,
+  "detail": "User with id abc-123 not found",
+  "instance": "/users/abc-123",
+  "timestamp": "2026-06-07T20:00:00.000Z",
+  "code": "USR-404"
+}
+```
+
+Sets `Content-Type: application/problem+json`.
+
+Non-ErrifyError exceptions are passed through when `passthrough: true` (default).
+
+## RFC 7807 fields
+
+| Field | Source |
+|---|---|
+| `type` | `${baseUrl}/errors/${meta.code}` |
+| `title` | `meta.title ?? meta.code` |
+| `status` | `meta.status` |
+| `detail` | Resolved message (factory result or static string) |
+| `instance` | `request.url` |
+| `timestamp` | `new Date().toISOString()` |
+| `code` | `meta.code` — machine-readable, for programmatic error handling |
+
+## TypeScript inference
+
+The key type machinery in `src/types.ts`:
+
+```ts
+type InferArgs<T extends ErrorDefinition<any>> =
+  T extends ErrorDefinition<infer A> ? A : [];
+
+export type ErrifyMap<T extends Record<string, ErrorDefinition<any>>> = {
+  readonly [K in keyof T]: ErrifyFn<InferArgs<T[K]>>;
+};
+```
+
+`ErrorDefinition<A>` binds the tuple type `A` to the message factory's parameter list. `InferArgs` extracts it. The result is that each catalog key becomes a function whose parameter types are inferred directly from the `message` factory signature — no manual type annotations needed.
+
+## Source files
+
+- [src/errify.ts](src/errify.ts) — `errify()` factory function
+- [src/errify-error.ts](src/errify-error.ts) — `ErrifyError` class extending `HttpException`
+- [src/throws.decorator.ts](src/throws.decorator.ts) — `@Throws()`, `THROWS_METADATA_KEY`, Swagger injection
+- [src/errify.filter.ts](src/errify.filter.ts) — `ErrifyExceptionFilter`, RFC 7807 formatting
+- [src/errify.module.ts](src/errify.module.ts) — `ErrifyModule.forRoot()`
+- [src/types.ts](src/types.ts) — `ErrorDefinition`, `ErrorMeta`, `ErrifyFn`, `ErrifyMap`
+- [src/index.ts](src/index.ts) — public API exports
